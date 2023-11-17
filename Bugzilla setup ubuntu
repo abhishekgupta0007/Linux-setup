@@ -1,0 +1,91 @@
+https://cloudinfrastructureservices.co.uk/how-to-install-bugzilla-bug-tracker-on-ubuntu-server-20-04-tutorial/
+https://www.devart.com/dbforge/mysql/how-to-install-mysql-on-ubuntu/
+
+
+1. Install Required Dependencies
+
+apt-get install perl libappconfig-perl libdate-calc-perl libtemplate-perl libmime-tools-perl build-essential libdatetime-timezone-perl libdatetime-perl libemail-sender-perl libemail-mime-perl libemail-mime-perl libdbi-perl libdbd-mysql-perl libcgi-pm-perl libmath-random-isaac-perl libmath-random-isaac-xs-perl libapache2-mod-perl2 libapache2-mod-perl2-dev libchart-perl libxml-perl libxml-twig-perl perlmagick libgd-graph-perl libtemplate-plugin-gd-perl libsoap-lite-perl libhtml-scrubber-perl libjson-rpc-perl libdaemon-generic-perl libtheschwartz-perl libtest-taint-perl libauthen-radius-perl libfile-slurp-perl libencode-detect-perl libmodule-build-perl libnet-ldap-perl libfile-which-perl libauthen-sasl-perl libfile-mimeinfo-perl libhtml-formattext-withlinks-perl libgd-dev graphviz sphinx-common rst2pdf libemail-address-perl libemail-reply-perl -y
+perl -v
+
+2. Install Apache Webserver
+apt-get install apache2 -y
+systemctl start apache2
+systemctl enable apache2
+
+3. Install and Configure Mysql5.7 Database Server
+  3.1 Add the MySQL 5.7 APT Repository
+      wget https://dev.mysql.com/get/mysql-apt-config_0.8.12-1_all.deb
+      sudo dpkg -i mysql-apt-config_0.8.12-1_all.deb
+      select Ubuntu Bionic.
+      select the MySQL Server & Cluster option. Then, select mysql-5.7 and finally select Ok.
+      sudo apt update
+      sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 467B942D3A79BD29
+      sudo apt update
+      sudo apt-cache policy mysql-server
+ 3.2 Install MySQL 5.7
+      sudo apt install -f mysql-client=5.7* mysql-community-server=5.7* mysql-server=5.7*
+ 3.3 Secure your MySQL root user accoun
+    sudo mysql_secure_installation
+    mysql -u root -p
+    SELECT VERSION();
+    CREATE USER 'username'@'localhost' IDENTIFIED BY 'user_password';
+    GRANT CREATE, SELECT ON *.* TO 'username'@'localhost';
+    SELECT user FROM mysql.user;
+    sudo systemctl status mysql
+    mysql -u root –p
+
+4. Install Bugzilla on Ubuntu 20.04
+wget https://ftp.mozilla.org/pub/mozilla.org/webtools/bugzilla-5.0.6.tar.gz
+mkdir /var/www/html/bugzilla
+tar xf bugzilla-5.0.6.tar.gz -C /var/www/html/bugzilla --strip-components=1
+chown -R www-data:www-data /var/www/html/bugzilla/
+chmod -R 755  /var/www/html/bugzilla/
+cd /var/www/html/bugzilla
+./checksetup.pl
+/usr/bin/perl install-module.pl --all
+nano /var/www/html/bugzilla/localconfig
+
+$create_htaccess = 1;
+$webservergroup = 'www-data';
+$use_suexec = 1;
+$db_driver = 'mysql';
+$db_host = 'localhost';
+$db_name = 'bugzilladb';
+$db_user = 'bugzillauser';
+$db_pass = 'securepassword';
+$db_port = '3306';
+
+sed -i 's/^.*$var =~ tr/#&/' /var/www/html/bugzilla/Bugzilla/Util.pm
+a2enmod headers env rewrite expires cgi
+systemctl restart apache2
+./checksetup.pl
+vi localconfig
+./checksetup.pl
+
+5. Configure Apache for Bugzilla
+nano /etc/apache2/sites-available/bugzilla.conf
+
+<VirtualHost *:80>
+ServerName bugzilla.example.com
+DocumentRoot /var/www/html/bugzilla/
+
+<Directory /var/www/html/bugzilla/>
+AddHandler cgi-script .cgi
+Options +Indexes +ExecCGI
+DirectoryIndex index.cgi
+AllowOverride Limit FileInfo Indexes Options AuthConfig
+</Directory>
+
+ErrorLog /var/log/apache2/bugzilla.error_log
+CustomLog /var/log/apache2/bugzilla.access_log common
+</VirtualHost>
+a2ensite bugzilla.conf
+systemctl restart apache2
+systemctl status apache2
+/var/www/html/bugzilla/testserver.pl http://bugzilla.example.com
+
+
+
+
+
+
